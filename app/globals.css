@@ -1,26 +1,376 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-gray-900 text-white;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .glass-card {
+    @apply bg-gray-800/80 backdrop-blur-lg border border-gray-700/50 shadow-xl;
+  }
+  
+  .gradient-border {
+    @apply bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 p-[1px] rounded-xl;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent;
+  }
+  
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl;
+  }
+  
+  .widget-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  @media (min-width: 768px) {
+    .widget-grid {
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 2rem;
+    }
+  }
+  
+  .task-hierarchy {
+    border-left: 3px solid #374151;
+    margin-left: 0.75rem;
+    padding-left: 1.5rem;
+    position: relative;
+  }
+  
+  .task-hierarchy::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #374151;
+  }
+  
+  .task-hierarchy.completed {
+    border-left-color: #10b981;
+  }
+  
+  .task-hierarchy.completed::before {
+    background: #10b981;
+  }
+  
+  .task-hierarchy.in-progress {
+    border-left-color: #3b82f6;
+  }
+  
+  .task-hierarchy.in-progress::before {
+    background: #3b82f6;
+  }
+  
+  .status-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 ring-inset;
+  }
+  
+  .status-to-do {
+    @apply bg-gray-700/50 text-gray-300 ring-gray-600;
+  }
+  
+  .status-in-progress {
+    @apply bg-blue-500/20 text-blue-300 ring-blue-500/30;
+  }
+  
+  .status-under-review {
+    @apply bg-yellow-500/20 text-yellow-300 ring-yellow-500/30;
+  }
+  
+  .status-blocked {
+    @apply bg-red-500/20 text-red-300 ring-red-500/30;
+  }
+  
+  .status-completed {
+    @apply bg-green-500/20 text-green-300 ring-green-500/30;
+  }
+  
+  .priority-high {
+    @apply bg-red-500/10 border-red-500/30 ring-red-500/20;
+  }
+  
+  .priority-medium {
+    @apply bg-yellow-500/10 border-yellow-500/30 ring-yellow-500/20;
+  }
+  
+  .priority-low {
+    @apply bg-gray-500/10 border-gray-500/30 ring-gray-500/20;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/50 text-gray-200 font-semibold py-3 px-6 rounded-2xl border border-gray-600 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-700/50 backdrop-blur-sm text-white placeholder-gray-400;
+  }
+  
+  .dark-card {
+    @apply bg-gray-800/80 backdrop-blur-lg border border-gray-700/50 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300;
+  }
+
+  /* Scrollable containers */
+  .scrollable-container {
+    @apply overflow-y-auto;
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #1f2937;
+  }
+
+  .scrollable-container::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollable-container::-webkit-scrollbar-track {
+    background: #1f2937;
+    border-radius: 4px;
+  }
+
+  .scrollable-container::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 4px;
+  }
+
+  .scrollable-container::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  /* Always visible scrollbar */
+  .scrollbar-always {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #1f2937;
+    overflow-y: scroll !important;
+  }
+
+  .scrollbar-always::-webkit-scrollbar {
+    width: 12px;
+    display: block !important;
+  }
+
+  .scrollbar-always::-webkit-scrollbar-track {
+    background: #1f2937;
+    border-radius: 6px;
+    border: 1px solid #374151;
+  }
+
+  .scrollbar-always::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 6px;
+    border: 1px solid #374151;
+  }
+
+  .scrollbar-always::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  .scrollbar-always::-webkit-scrollbar-corner {
+    background: #1f2937;
+  }
+
+  /* Responsive scrollable heights */
+  .scrollable-sm {
+    max-height: 300px;
+  }
+
+  .scrollable-md {
+    max-height: 400px;
+  }
+
+  .scrollable-lg {
+    max-height: 500px;
+  }
+
+  .scrollable-xl {
+    max-height: 600px;
+  }
+
+  @media (max-width: 768px) {
+    .scrollable-sm {
+      max-height: 250px;
+    }
+    
+    .scrollable-md {
+      max-height: 300px;
+    }
+    
+    .scrollable-lg {
+      max-height: 350px;
+    }
+    
+    .scrollable-xl {
+      max-height: 400px;
+    }
+  }
+
+  /* Responsive text sizes */
+  .responsive-text-xs {
+    @apply text-xs;
+  }
+
+  .responsive-text-sm {
+    @apply text-sm;
+  }
+
+  .responsive-text-base {
+    @apply text-sm md:text-base;
+  }
+
+  .responsive-text-lg {
+    @apply text-base md:text-lg;
+  }
+
+  .responsive-text-xl {
+    @apply text-lg md:text-xl;
+  }
+
+  .responsive-text-2xl {
+    @apply text-xl md:text-2xl;
+  }
+
+  .responsive-text-3xl {
+    @apply text-2xl md:text-3xl;
+  }
+
+  .responsive-text-4xl {
+    @apply text-3xl md:text-4xl;
+  }
+
+  /* Responsive spacing */
+  .responsive-p-4 {
+    @apply p-3 md:p-4;
+  }
+
+  .responsive-p-6 {
+    @apply p-4 md:p-6;
+  }
+
+  .responsive-p-8 {
+    @apply p-6 md:p-8;
+  }
+
+  .responsive-m-4 {
+    @apply m-3 md:m-4;
+  }
+
+  .responsive-m-6 {
+    @apply m-4 md:m-6;
+  }
+
+  .responsive-m-8 {
+    @apply m-6 md:m-8;
+  }
+
+  /* Responsive grid gaps */
+  .responsive-gap-4 {
+    @apply gap-3 md:gap-4;
+  }
+
+  .responsive-gap-6 {
+    @apply gap-4 md:gap-6;
+  }
+
+  .responsive-gap-8 {
+    @apply gap-6 md:gap-8;
+  }
+}
+
+/* Animation delay utilities */
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Horizontal scrollbar */
+::-webkit-scrollbar:horizontal {
+  height: 8px;
+}
+
+/* Responsive utilities for better mobile experience */
+@media (max-width: 640px) {
+  .mobile-full-width {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+  }
+  
+  .mobile-padding {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Ensure proper text wrapping */
+.text-wrap {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Responsive flex utilities */
+.responsive-flex-col {
+  @apply flex flex-col md:flex-row;
+}
+
+.responsive-flex-row {
+  @apply flex flex-col sm:flex-row;
+}
+
+/* Better button responsiveness */
+.responsive-btn {
+  @apply px-4 py-2 text-sm md:px-6 md:py-3 md:text-base;
+}
+
+/* Responsive card padding */
+.responsive-card-padding {
+  @apply p-4 md:p-6 lg:p-8;
+}
+
+/* Responsive modal sizing */
+.responsive-modal {
+  @apply w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl;
+}
+
+.responsive-modal-lg {
+  @apply w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl;
+}
+
+.responsive-modal-xl {
+  @apply w-full max-w-lg md:max-w-xl lg:max-w-2xl xl:max-w-4xl;
 }

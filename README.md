@@ -20,6 +20,12 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Project Documentation
+
+Detailed workflow plans and team information can be found in the `docs` directory:
+- [NIDAR Competition Workflow Phases 3-7](docs/NIDAR_Competition_Workflow_Phases_3-7.md)
+- [NIDAR Competition Workflow Phases 1-2](docs/Phase_1_and_2_Workflow_Plan.md)
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
