@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { storage } from './firebase';
+import { storage, db } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, getDocs, writeBatch, addDoc, where } from 'firebase/firestore';
 
 export interface User {
   id: string;
@@ -678,18 +679,6 @@ export const useAppStore = create<AppState>()(
     const chatMessagesCollection = collection(db, "chatMessages");
     const documentsCollection = collection(db, "documents");
 
-    // Initial state
-    const initialState = {
-      currentUser: null,
-      isAuthenticated: false,
-      registeredUsers: INITIAL_USERS,
-      passwordResetRequests: [],
-      tasks: [],
-      announcements: [],
-      chatMessages: [],
-      documents: [],
-    };
-
     // Set up real-time listeners
     // Tasks Listener
     onSnapshot(query(tasksCollection, orderBy("createdAt")), (snapshot) => {
@@ -738,7 +727,14 @@ export const useAppStore = create<AppState>()(
     });
 
     return {
-      ...initialState,
+      currentUser: null,
+      isAuthenticated: false,
+      registeredUsers: INITIAL_USERS,
+      passwordResetRequests: [],
+      tasks: [],
+      announcements: [],
+      chatMessages: [],
+      documents: [],
 
       // Authentication actions
       login: async (username: string, password: string) => {
@@ -863,38 +859,54 @@ export const useAppStore = create<AppState>()(
 
       // Task actions
       addTask: async (taskData) => {
-        const newTaskRef = doc(tasksCollection);
         const newTask = {
           ...taskData,
-          id: newTaskRef.id,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
-        await setDoc(newTaskRef, newTask);
+        await addDoc(tasksCollection, newTask);
       },
 
       updateTask: async (id, updates) => {
         const state = get();
         const currentUser = state.currentUser;
         
-        // Check permissions: user can only update their own tasks or admin can update any
-        const canUpdate = (taskAssignedTo: string) => {
-          return currentUser?.isLeader || currentUser?.id === taskAssignedTo;
-        };
-
         const taskRef = doc(tasksCollection, id);
         const taskSnap = await getDoc(taskRef);
 
-        if (taskSnap.exists() && canUpdate(taskSnap.data().assignedTo)) {
-          await updateDoc(taskRef, { ...updates, updatedAt: new Date() });
-        } else if (taskSnap.exists() && taskSnap.data().subTasks) {
-          const updatedSubTasks = taskSnap.data().subTasks.map((subtask: any) => {
-            if (subtask.id === id && canUpdate(subtask.assignedTo)) {
-              return { ...subtask, ...updates, updatedAt: new Date() };
-            }
-            return subtask;
-          });
-          await updateDoc(taskRef, { subTasks: updatedSubTasks, updatedAt: new Date() });
+        if (taskSnap.exists()) {
+          const task = taskSnap.data() as Task;
+          const canUpdate = currentUser?.isLeader || currentUser?.id === task.assignedTo;
+
+          if (canUpdate) {
+            await updateDoc(taskRef, { ...updates, updatedAt: new Date() });
+          } else if (task.subTasks) {
+            const updatedSubTasks = task.subTasks.map((subtask: any) => {
+              if (subtask.id === id && (currentUser?.isLeader || currentUser?.id === subtask.assignedTo)) {
+                return { ...subtask, ...updates, updatedAt: new Date() };
+              }
+              return subtask;
+            });
+            await updateDoc(taskRef, { subTasks: updatedSubTasks, updatedAt: new Date() });
+          }
+        } else {
+          // If it's a subtask, find its parent and update
+          const parentTaskQuery = query(tasksCollection, where("subTasks", "array-contains", { id: id }));
+          const parentTaskSnapshot = await getDocs(parentTaskQuery);
+
+          if (!parentTaskSnapshot.empty) {
+            const parentTaskDoc = parentTaskSnapshot.docs[0];
+            const parentTask = parentTaskDoc.data() as Task;
+            const parentTaskRef = doc(tasksCollection, parentTaskDoc.id);
+
+            const updatedSubTasks = parentTask.subTasks?.map((subtask: any) => {
+              if (subtask.id === id && (currentUser?.isLeader || currentUser?.id === subtask.assignedTo)) {
+                return { ...subtask, ...updates, updatedAt: new Date() };
+              }
+              return subtask;
+            });
+            await updateDoc(parentTaskRef, { subTasks: updatedSubTasks, updatedAt: new Date() });
+          }
         }
       },
 
@@ -912,12 +924,15 @@ export const useAppStore = create<AppState>()(
           await deleteDoc(taskRef);
         } else {
           // If it's a subtask, find its parent and update
-          const parentTask = state.tasks.find(task => 
-            task.subTasks?.some(subtask => subtask.id === id)
-          );
-          if (parentTask) {
+          const parentTaskQuery = query(tasksCollection, where("subTasks", "array-contains", { id: id }));
+          const parentTaskSnapshot = await getDocs(parentTaskQuery);
+
+          if (!parentTaskSnapshot.empty) {
+            const parentTaskDoc = parentTaskSnapshot.docs[0];
+            const parentTask = parentTaskDoc.data() as Task;
+            const parentTaskRef = doc(tasksCollection, parentTaskDoc.id);
+
             const updatedSubTasks = parentTask.subTasks?.filter(subtask => subtask.id !== id);
-            const parentTaskRef = doc(tasksCollection, parentTask.id);
             await updateDoc(parentTaskRef, { subTasks: updatedSubTasks, updatedAt: new Date() });
           }
         }
@@ -925,13 +940,11 @@ export const useAppStore = create<AppState>()(
 
       // Announcement actions
       addAnnouncement: async (announcementData) => {
-        const newAnnouncementRef = doc(announcementsCollection);
         const newAnnouncement = {
           ...announcementData,
-          id: newAnnouncementRef.id,
           timestamp: new Date(),
         };
-        await setDoc(newAnnouncementRef, newAnnouncement);
+        await addDoc(announcementsCollection, newAnnouncement);
       },
 
       deleteAnnouncement: async (id) => {
@@ -940,18 +953,14 @@ export const useAppStore = create<AppState>()(
 
       // Chat actions
       addChatMessage: async (messageData) => {
-        const newChatMessageRef = doc(chatMessagesCollection);
         const newChatMessage = {
           ...messageData,
-          id: newChatMessageRef.id,
           timestamp: new Date(),
         };
-        await setDoc(newChatMessageRef, newChatMessage);
+        await addDoc(chatMessagesCollection, newChatMessage);
       },
 
       clearChat: async () => {
-        // This is more complex in Firestore as there's no direct "clear collection" method
-        // You would typically delete documents in batches
         const snapshot = await getDocs(chatMessagesCollection);
         const batch = writeBatch(db);
         snapshot.docs.forEach((d) => {
@@ -967,13 +976,12 @@ export const useAppStore = create<AppState>()(
           const snapshot = await uploadBytes(storageRef, file);
           const fileUrl = await getDownloadURL(snapshot.ref);
 
-          const newDocumentRef = doc(documentsCollection);
           const newDocument = {
             ...documentData,
-            id: newDocumentRef.id,
             fileUrl: fileUrl,
+            uploadedAt: new Date(),
           };
-          await setDoc(newDocumentRef, newDocument);
+          await addDoc(documentsCollection, newDocument);
         } catch (error) {
           console.error("Error uploading document:", error);
           // Optionally, handle the error in the UI
@@ -986,7 +994,10 @@ export const useAppStore = create<AppState>()(
 
         if (documentToDelete && documentToDelete.fileUrl) {
           try {
-            const fileRef = ref(storage, documentToDelete.fileUrl);
+            // Extract the path from the fileUrl
+            const url = new URL(documentToDelete.fileUrl);
+            const path = decodeURIComponent(url.pathname.split('/o/')[1]);
+            const fileRef = ref(storage, path);
             await deleteObject(fileRef);
             await deleteDoc(doc(documentsCollection, id));
           } catch (error) {
@@ -999,273 +1010,6 @@ export const useAppStore = create<AppState>()(
       },
     };
   }
-);
-    // Initial state
-    currentUser: null,
-    isAuthenticated: false,
-    registeredUsers: INITIAL_USERS,
-    passwordResetRequests: [],
-    tasks: [], // Initialize as empty, will be fetched from Firestore
-    announcements: [], // Initialize as empty, will be fetched from Firestore
-    chatMessages: [], // Initialize as empty, will be fetched from Firestore
-    documents: [], // Initialize as empty, will be fetched from Firestore
-
-    // Authentication actions
-    login: async (username: string, password: string) => {
-      const state = get();
-      const user = state.registeredUsers.find(u => 
-        u.name.toLowerCase().replace(/\s+/g, '') === username.toLowerCase().replace(/\s+/g, '') ||
-        u.id === username.toLowerCase().replace(/\s+/g, '-')
-      );
-      
-      if (user && user.password === password) {
-        set({ 
-          currentUser: { ...user, isAuthenticated: true }, 
-          isAuthenticated: true 
-        });
-        return true;
-      }
-      return false;
-    },
-
-    register: async (name: string, password: string) => {
-      const state = get();
-      const userId = name.toLowerCase().replace(/\s+/g, '-');
-      
-      // Check if user already exists
-      const existingUser = state.registeredUsers.find(u => 
-        u.name.toLowerCase().replace(/\s+/g, '') === name.toLowerCase().replace(/\s+/g, '') ||
-        u.id === userId
-      );
-      
-      if (existingUser) {
-        return false; // User already exists
-      }
-
-      const newUser: User = {
-        id: userId,
-        name,
-        role: 'Team Member', // Default role
-        specialization: 'General', // Default specialization
-        isLeader: false, // New users are not leaders by default
-        isAuthenticated: false,
-        password: password,
-      };
-
-      set(state => ({
-        registeredUsers: [...state.registeredUsers, newUser]
-      }));
-
-      return true;
-    },
-
-    logout: () => {
-      set({ currentUser: null, isAuthenticated: false });
-    },
-
-    // Password reset actions
-    requestPasswordReset: async (username: string, newPassword: string) => {
-      const state = get();
-      const user = state.registeredUsers.find(u => 
-        u.name.toLowerCase().replace(/\s+/g, '') === username.toLowerCase().replace(/\s+/g, '') ||
-        u.id === username.toLowerCase().replace(/\s+/g, '-')
-      );
-      
-      if (!user) {
-        return false; // User not found
-      }
-
-      // Check if there's already a pending request for this user
-      const existingRequest = state.passwordResetRequests.find(req => 
-        req.userId === user.id && req.status === 'pending'
-      );
-      
-      if (existingRequest) {
-        return false; // Already has a pending request
-      }
-
-      const newRequest: PasswordResetRequest = {
-        id: Date.now().toString(),
-        userId: user.id,
-        userName: user.name,
-        requestedAt: new Date(),
-        status: 'pending',
-        newPassword: newPassword,
-      };
-
-      set(state => ({
-        passwordResetRequests: [...state.passwordResetRequests, newRequest]
-      }));
-
-      return true;
-    },
-
-    approvePasswordReset: (requestId: string) => {
-      const state = get();
-      const request = state.passwordResetRequests.find(req => req.id === requestId);
-      
-      if (request && request.status === 'pending' && request.newPassword) {
-        // Update the user's password
-        set(state => ({
-          registeredUsers: state.registeredUsers.map(user =>
-            user.id === request.userId 
-              ? { ...user, password: request.newPassword }
-              : user
-          ),
-          passwordResetRequests: state.passwordResetRequests.map(req =>
-            req.id === requestId 
-              ? { ...req, status: 'approved' as const }
-              : req
-          )
-        }));
-      }
-    },
-
-    rejectPasswordReset: (requestId: string) => {
-      set(state => ({
-        passwordResetRequests: state.passwordResetRequests.map(req =>
-          req.id === requestId 
-            ? { ...req, status: 'rejected' as const }
-            : req
-        )
-      }));
-    },
-
-    // Task actions
-    addTask: (taskData) => {
-      const newTask: Task = {
-        ...taskData,
-        id: Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      set(state => ({ tasks: [...state.tasks, newTask] }));
-    },
-
-    updateTask: (id, updates) => {
-      const state = get();
-      const currentUser = state.currentUser;
-      
-      // Check permissions: user can only update their own tasks or admin can update any
-      const canUpdate = (taskAssignedTo: string) => {
-        return currentUser?.isLeader || currentUser?.id === taskAssignedTo;
-      };
-
-      set(state => ({
-        tasks: state.tasks.map(task => {
-          if (task.id === id && canUpdate(task.assignedTo)) {
-            return { ...task, ...updates, updatedAt: new Date() };
-          }
-          if (task.subTasks) {
-            return {
-              ...task,
-              subTasks: task.subTasks.map(subtask =>
-                subtask.id === id && canUpdate(subtask.assignedTo)
-                  ? { ...subtask, ...updates, updatedAt: new Date() }
-                  : subtask
-              )
-            };
-          }
-          return task;
-        })
-      }));
-    },
-
-    deleteTask: (id) => {
-      const state = get();
-      const currentUser = state.currentUser;
-      
-      // Only admin can delete tasks
-      if (!currentUser?.isLeader) return;
-
-      set(state => ({
-        tasks: state.tasks.filter(task => {
-          if (task.id === id) return false;
-          if (task.subTasks) {
-            task.subTasks = task.subTasks.filter(subtask => subtask.id !== id);
-          }
-          return true;
-        })
-      }));
-    },
-
-    // Announcement actions
-    addAnnouncement: (announcementData) => {
-      const newAnnouncement: Announcement = {
-        ...announcementData,
-        id: Date.now().toString(),
-        timestamp: new Date(),
-      };
-      set(state => ({ 
-        announcements: [newAnnouncement, ...state.announcements] 
-      }));
-    },
-
-    deleteAnnouncement: (id) => {
-      set(state => ({
-        announcements: state.announcements.filter(a => a.id !== id)
-      }));
-    },
-
-    // Chat actions
-    addChatMessage: (messageData) => {
-      const newMessage: ChatMessage = {
-        ...messageData,
-        id: Date.now().toString(),
-        timestamp: new Date(),
-      };
-      set(state => ({ 
-        chatMessages: [...state.chatMessages, newMessage] 
-      }));
-    },
-
-    clearChat: () => {
-      set({ chatMessages: [] });
-    },
-
-    // Document actions - Global storage accessible to all users
-    addDocument: async (documentData, file) => {
-      try {
-        const storageRef = ref(storage, `documents/${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        const fileUrl = await getDownloadURL(snapshot.ref);
-
-        const newDocument: Document = {
-          ...documentData,
-          id: Date.now().toString(),
-          fileUrl: fileUrl,
-        };
-        set(state => ({ 
-          documents: [...state.documents, newDocument] 
-        }));
-      } catch (error) {
-        console.error("Error uploading document:", error);
-        // Optionally, handle the error in the UI
-      }
-    },
-
-    deleteDocument: async (id) => {
-      const state = get();
-      const documentToDelete = state.documents.find(doc => doc.id === id);
-
-      if (documentToDelete && documentToDelete.fileUrl) {
-        try {
-          const fileRef = ref(storage, documentToDelete.fileUrl);
-          await deleteObject(fileRef);
-          set(state => ({
-            documents: state.documents.filter(d => d.id !== id)
-          }));
-        } catch (error) {
-          console.error("Error deleting document from storage:", error);
-          // Optionally, handle the error in the UI
-        }
-      } else {
-        set(state => ({
-          documents: state.documents.filter(d => d.id !== id)
-        }));
-      }
-    },
-  })
 );
 
 export const getTeamMembers = () => {
