@@ -248,6 +248,19 @@ export const populateInitialTasks = async () => {
 
 export const useAppStore = create<AppState>()((set, get) => {
   populateInitialTasks();
+
+  // Helper function to safely convert Firestore Timestamps or other date-like values to Date objects
+  const convertToDate = (value: any): Date => {
+    if (value instanceof Timestamp) {
+      return value.toDate();
+    }
+    if (value instanceof Date) {
+      return value;
+    }
+    // Attempt to parse if it's a string or other primitive
+    return new Date(value);
+  };
+
   // Firestore collections
   const tasksCollection = collection(db, "tasks");
   const announcementsCollection = collection(db, "announcements");
@@ -259,12 +272,12 @@ export const useAppStore = create<AppState>()((set, get) => {
   onSnapshot(query(tasksCollection, orderBy("createdAt")), (snapshot) => {
     const tasks = snapshot.docs.map(doc => {
       const data = doc.data();
-      const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-      const updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt);
+      const createdAt = convertToDate(data.createdAt);
+      const updatedAt = convertToDate(data.updatedAt);
 
       const subTasks = data.subTasks ? data.subTasks.map((subtaskData: Task) => {
-        const subtaskCreatedAt = subtaskData.createdAt instanceof Timestamp ? subtaskData.createdAt.toDate() : new Date(subtaskData.createdAt);
-        const subtaskUpdatedAt = subtaskData.updatedAt instanceof Timestamp ? subtaskData.updatedAt.toDate() : new Date(subtaskData.updatedAt);
+        const subtaskCreatedAt = convertToDate(subtaskData.createdAt);
+        const subtaskUpdatedAt = convertToDate(subtaskData.updatedAt);
         return {
           ...subtaskData,
           createdAt: subtaskCreatedAt,
@@ -278,8 +291,8 @@ export const useAppStore = create<AppState>()((set, get) => {
         createdAt,
         updatedAt,
         subTasks,
-      };
-    }) as Task[];
+      } as Task;
+    });
     set({ tasks });
     console.log("Tasks fetched from Firestore:", tasks.length);
   });
