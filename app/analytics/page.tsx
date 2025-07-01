@@ -24,58 +24,31 @@ import { TrendingUp, Users, Target, Activity, BarChart3, PieChart as PieChartIco
 export default function AnalyticsPage() {
   const { tasks, chatMessages } = useAppStore();
 
+  console.log("Tasks from store:", tasks);
+  console.log("Chat messages from store:", chatMessages);
+
   // Calculate project statistics from real data
-  const totalTasks = tasks.reduce((acc, task) => 
-    acc + (task.subTasks?.length || 1), 0
-  );
-  
-  const completedTasks = tasks.reduce((acc, task) => {
-    if (task.subTasks) {
-      return acc + task.subTasks.filter(st => st.status === 'Completed').length;
-    }
-    return acc + (task.status === 'Completed' ? 1 : 0);
-  }, 0);
+  const allTasks = tasks.flatMap(task => task.subTasks && task.subTasks.length > 0 ? task.subTasks : [task]);
+
+  const totalTasks = allTasks.length;
+  const completedTasks = allTasks.filter(t => t.status === 'Completed').length;
 
   const overallProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Status breakdown data from real tasks
-  const statusCounts = {
-    'To Do': 0,
-    'In Progress': 0,
-    'Under Review': 0,
-    'Blocked': 0,
-    'Completed': 0,
-  };
-
-  tasks.forEach(task => {
-    if (task.subTasks) {
-      task.subTasks.forEach(subtask => {
-        statusCounts[subtask.status]++;
-      });
-    } else {
-      statusCounts[task.status]++;
-    }
-  });
+  const statusCounts = allTasks.reduce((acc, task) => {
+    acc[task.status] = (acc[task.status] || 0) + 1;
+    return acc;
+  }, {} as Record<Task['status'], number>);
 
   const statusData = Object.entries(statusCounts).map(([status, count]) => ({
     name: status,
     value: count,
   }));
 
-  // Individual progress data from real tasks
-  const teamMembers = [
-    { id: 'pranava-kumar', name: 'Pranava Kumar' },
-    { id: 'arun-kumar', name: 'Arun Kumar' },
-    { id: 'mohana-divya', name: 'Mohana Divya' },
-    { id: 'dinesh-kumar', name: 'Dinesh Kumar' },
-    { id: 'hitarthi-sharma', name: 'Hitarthi Sharma' },
-  ];
+  const teamMembers = useAppStore(state => state.registeredUsers);
 
   const individualData = teamMembers.map(member => {
-    const memberTasks = tasks.flatMap(task => 
-      task.subTasks?.filter(st => st.assignedTo === member.id) || 
-      (task.assignedTo === member.id ? [task] : [])
-    );
+    const memberTasks = allTasks.filter(t => t.assignedTo === member.id);
     const completed = memberTasks.filter(t => t.status === 'Completed').length;
     const total = memberTasks.length;
     return {
@@ -86,15 +59,10 @@ export default function AnalyticsPage() {
     };
   });
 
-  // Time series data based on task completion dates
   const getTimeSeriesData = () => {
-    const completedTasksWithDates = tasks.flatMap(task => {
-      const allTasks = task.subTasks ? task.subTasks : [task];
-      return allTasks.filter(t => t.status === 'Completed');
-    });
+    const completedTasksWithDates = allTasks.filter(t => t.status === 'Completed');
 
-    // Group by week
-    const weeklyData = [];
+    const weeklyData: { week: string, tasks: number }[] = [];
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
@@ -116,11 +84,10 @@ export default function AnalyticsPage() {
 
   const timeSeriesData = getTimeSeriesData();
 
-  // Phase progress data from real tasks
   const phaseData = tasks.map(phase => {
-    const subTasks = phase.subTasks || [phase];
-    const completed = subTasks.filter(t => t.status === 'Completed').length;
-    const total = subTasks.length;
+    const phaseTasks = allTasks.filter(t => t.phase === phase.phase);
+    const completed = phaseTasks.filter(t => t.status === 'Completed').length;
+    const total = phaseTasks.length;
     return {
       name: phase.title.replace('Phase ', 'P').substring(0, 15) + '...',
       progress: total > 0 ? Math.round((completed / total) * 100) : 0,
@@ -135,6 +102,10 @@ export default function AnalyticsPage() {
       messages: memberMessages.length,
     };
   });
+
+  console.log("Individual Data:", individualData);
+  console.log("Time Series Data:", timeSeriesData);
+  console.log("Communication Data:", communicationData);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 

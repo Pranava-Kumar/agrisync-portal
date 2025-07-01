@@ -89,13 +89,8 @@ interface AppState {
   
   // Actions
   login: (username: string, password: string) => Promise<boolean>;
-  register: (name: string, password: string) => Promise<boolean>;
   logout: () => void;
-  
-  // Password reset actions
-  requestPasswordReset: (username: string, newPassword: string) => Promise<boolean>;
-  approvePasswordReset: (requestId: string) => void;
-  rejectPasswordReset: (requestId: string) => void;
+  checkAuthOnLoad: () => void;
   
   // Task actions
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -124,7 +119,7 @@ const INITIAL_USERS: User[] = [
     specialization: 'IT',
     isLeader: true,
     isAuthenticated: false,
-    password: 'Pranava123',
+    password: 'Pranava0901',
   },
   {
     id: 'arun-kumar',
@@ -133,7 +128,7 @@ const INITIAL_USERS: User[] = [
     specialization: 'Robotics',
     isLeader: false,
     isAuthenticated: false,
-    password: 'Arun123',
+    password: 'Arun1234',
   },
   {
     id: 'mohana-divya',
@@ -142,7 +137,7 @@ const INITIAL_USERS: User[] = [
     specialization: 'ECE',
     isLeader: false,
     isAuthenticated: false,
-    password: 'Mohana123',
+    password: 'Mohana1234',
   },
   {
     id: 'dinesh-kumar',
@@ -151,7 +146,7 @@ const INITIAL_USERS: User[] = [
     specialization: 'CSE',
     isLeader: false,
     isAuthenticated: false,
-    password: 'Dinesh123',
+    password: 'Dinesh1234',
   },
   {
     id: 'hitarthi-sharma',
@@ -160,7 +155,7 @@ const INITIAL_USERS: User[] = [
     specialization: 'Biotechnology',
     isLeader: false,
     isAuthenticated: false,
-    password: 'Hitarthi123',
+    password: 'Hitarthi1234',
   },
 ];
 
@@ -181,7 +176,9 @@ const INITIAL_DOCUMENTS: Document[] = [
 
 export const populateInitialTasks = async () => {
   const tasksCollection = collection(db, "tasks");
-  const initialTasks = [
+  const snapshot = await getDocs(tasksCollection);
+  if (snapshot.empty) {
+    const initialTasks = [
       {
         id: 'phase-1',
         title: 'Phase 1: Foundational Research & System Architecture',
@@ -237,13 +234,16 @@ export const populateInitialTasks = async () => {
       },
     ];
 
-  const batch = writeBatch(db);
-  initialTasks.forEach(task => {
-    const docRef = doc(tasksCollection, task.id);
-    batch.set(docRef, task);
-  });
-  await batch.commit();
-  console.log("Initial tasks populated to Firestore.");
+    const batch = writeBatch(db);
+    initialTasks.forEach(task => {
+      const docRef = doc(tasksCollection, task.id);
+      batch.set(docRef, task);
+    });
+    await batch.commit();
+    console.log("Initial tasks populated to Firestore.");
+  } else {
+    console.log("Tasks collection already exists in Firestore. Skipping initial population.");
+  }
 };
 
 export const useAppStore = create<AppState>()((set, get) => {
@@ -329,114 +329,41 @@ export const useAppStore = create<AppState>()((set, get) => {
       );
       
       if (user && user.password === password) {
-        set({ 
-          currentUser: { ...user, isAuthenticated: true }, 
-          isAuthenticated: true 
-        });
+        const authenticatedUser = { ...user, isAuthenticated: true };
+        set({ currentUser: authenticatedUser, isAuthenticated: true });
+
+        // Set expiration for 3 days
+        const expirationTime = new Date();
+        expirationTime.setDate(expirationTime.getDate() + 3);
+
+        localStorage.setItem('currentUser', JSON.stringify(authenticatedUser));
+        localStorage.setItem('sessionExpiration', expirationTime.toISOString());
         return true;
       }
       return false;
     },
 
-    register: async (name: string, password: string) => {
-      const state = get();
-      const userId = name.toLowerCase().replace(/\s+/g, '-');
-      
-      // Check if user already exists
-      const existingUser = state.registeredUsers.find(u => 
-        u.name.toLowerCase().replace(/\s+/g, '') === name.toLowerCase().replace(/\s+/g, '') ||
-        u.id === userId
-      );
-      
-      if (existingUser) {
-        return false; // User already exists
-      }
-
-      const newUser: User = {
-        id: userId,
-        name,
-        role: 'Team Member',
-        specialization: 'General',
-        isLeader: false,
-        isAuthenticated: false,
-        password: password,
-      };
-
-      set(state => ({
-        registeredUsers: [...state.registeredUsers, newUser]
-      }));
-
-      return true;
-    },
-
     logout: () => {
       set({ currentUser: null, isAuthenticated: false });
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('sessionExpiration');
     },
 
-    // Password reset actions
-    requestPasswordReset: async (username: string, newPassword: string) => {
-      const state = get();
-      const user = state.registeredUsers.find(u => 
-        u.name.toLowerCase().replace(/\s+/g, '') === username.toLowerCase().replace(/\s+/g, '') ||
-        u.id === username.toLowerCase().replace(/\s+/g, '-')
-      );
-      
-      if (!user) {
-        return false; // User not found
+    checkAuthOnLoad: () => {
+      if (typeof window !== 'undefined') { // Ensure localStorage is available
+        const storedUser = localStorage.getItem('currentUser');
+        const storedExpiration = localStorage.getItem('sessionExpiration');
+
+        if (storedUser && storedExpiration) {
+          const expirationTime = new Date(storedExpiration);
+          if (expirationTime > new Date()) {
+            set({ currentUser: JSON.parse(storedUser), isAuthenticated: true });
+          } else {
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('sessionExpiration');
+          }
+        }
       }
-
-      const existingRequest = state.passwordResetRequests.find(req => 
-        req.userId === user.id && req.status === 'pending'
-      );
-      
-      if (existingRequest) {
-        return false; // Already has a pending request
-      }
-
-      const newRequest: PasswordResetRequest = {
-        id: Date.now().toString(),
-        userId: user.id,
-        userName: user.name,
-        requestedAt: new Date(),
-        status: 'pending',
-        newPassword: newPassword,
-      };
-
-      set(state => ({
-        passwordResetRequests: [...state.passwordResetRequests, newRequest]
-      }));
-
-      return true;
-    },
-
-    approvePasswordReset: (requestId: string) => {
-      const state = get();
-      const request = state.passwordResetRequests.find(req => req.id === requestId);
-      
-      if (request && request.status === 'pending' && request.newPassword) {
-        set(state => ({
-          registeredUsers: state.registeredUsers.map(user =>
-            user.id === request.userId 
-              ? { ...user, password: request.newPassword }
-              : user
-          ),
-          passwordResetRequests: state.passwordResetRequests.map(req =>
-            req.id === requestId 
-              ? { ...req, status: 'approved' as const }
-              : req
-          )
-        }));
-      }
-    },
-
-    rejectPasswordReset: (requestId: string) => {
-      set(state => ({
-        passwordResetRequests: state.passwordResetRequests.map(req =>
-          req.id === requestId 
-            ? { ...req, status: 'rejected' as const }
-            : req
-        )
-      }));
     },
 
     // Task actions

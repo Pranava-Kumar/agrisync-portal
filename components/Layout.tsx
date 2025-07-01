@@ -11,13 +11,14 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { isAuthenticated, currentUser } = useAppStore();
+  const { isAuthenticated, currentUser, checkAuthOnLoad } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    checkAuthOnLoad();
+  }, [checkAuthOnLoad]);
 
   if (!mounted) {
     return <LoadingSpinner />;
