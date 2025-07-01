@@ -263,18 +263,7 @@ export default function AuthForm() {
                 </div>
               )}
             </button>
-          </form>
-
-          {/* Demo Credentials */}
-          {mode === 'login' && (
-            <div className="mt-8 p-4 bg-gray-700/30 rounded-xl border border-gray-600/30">
-              <h4 className="text-sm font-medium text-gray-300 mb-3">Demo Credentials:</h4>
-              <div className="space-y-2 text-xs text-gray-400">
-                <p><strong>Admin:</strong> Pranava Kumar / Pranava123</p>
-                <p className="text-blue-300 mt-2">Only Pranava Kumar has access initially. Other users must register.</p>
-              </div>
-            </div>
-          )}
+          </form>       
 
           {mode === 'register' && (
             <div className="mt-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/30">
