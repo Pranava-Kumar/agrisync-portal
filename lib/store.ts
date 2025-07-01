@@ -28,6 +28,13 @@ export interface Task {
   updatedAt: Date;
 }
 
+// Interface for raw data coming from Firestore, where dates might be Timestamps
+interface RawTaskData extends Omit<Task, 'createdAt' | 'updatedAt' | 'subTasks'> {
+  createdAt: Timestamp | Date | string;
+  updatedAt: Timestamp | Date | string;
+  subTasks?: RawTaskData[];
+}
+
 export interface Announcement {
   id: string;
   title: string;
@@ -250,7 +257,7 @@ export const useAppStore = create<AppState>()((set, get) => {
   populateInitialTasks();
 
   // Helper function to safely convert Firestore Timestamps or other date-like values to Date objects
-  const convertToDate = (value: any): Date => {
+  const convertToDate = (value: Timestamp | Date | string | number): Date => {
     if (value instanceof Timestamp) {
       return value.toDate();
     }
@@ -271,7 +278,7 @@ export const useAppStore = create<AppState>()((set, get) => {
   // Tasks Listener
   onSnapshot(query(tasksCollection, orderBy("createdAt")), (snapshot) => {
     const tasks = snapshot.docs.map(doc => {
-      const data = doc.data();
+      const data = doc.data() as RawTaskData;
       const createdAt = convertToDate(data.createdAt);
       const updatedAt = convertToDate(data.updatedAt);
 
@@ -286,8 +293,8 @@ export const useAppStore = create<AppState>()((set, get) => {
       }) : [];
 
       return {
-        id: doc.id,
         ...data,
+        id: doc.id,
         createdAt,
         updatedAt,
         subTasks,
