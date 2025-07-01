@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useAppStore, getTeamMembers } from '@/lib/store';
-import { Plus, Users, Megaphone, Settings, Crown, Trash2, Edit, Check, X, Key, Clock, UserCheck, UserX } from 'lucide-react';
+import { Plus, Users, Megaphone, Settings, Crown, Trash2, Key, Clock} from 'lucide-react';
 
 export default function AdminPage() {
   const { 
@@ -12,10 +12,7 @@ export default function AdminPage() {
     addAnnouncement, 
     deleteAnnouncement,
     tasks,
-    chatMessages,
     passwordResetRequests,
-    approvePasswordReset,
-    rejectPasswordReset
   } = useAppStore();
   
   const teamMembers = getTeamMembers();
@@ -170,22 +167,6 @@ export default function AdminPage() {
                               {new Date(request.requestedAt).toLocaleDateString()} at {new Date(request.requestedAt).toLocaleTimeString()}
                             </span>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-2">
-                          <button
-                            onClick={() => approvePasswordReset(request.id)}
-                            className="p-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-xl border border-green-500/30 transition-colors"
-                            title="Approve request"
-                          >
-                            <UserCheck className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => rejectPasswordReset(request.id)}
-                            className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-xl border border-red-500/30 transition-colors"
-                            title="Reject request"
-                          >
-                            <UserX className="h-4 w-4" />
-                          </button>
                         </div>
                       </div>
                       <div className="bg-gray-700/30 rounded-xl p-3">

@@ -260,13 +260,17 @@ export const useAppStore = create<AppState>()((set, get) => {
     const tasks = snapshot.docs.map(doc => {
       const data = doc.data();
       const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-      const updatedAt = data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt);
+      const updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt);
 
-      const subTasks = data.subTasks ? data.subTasks.map((subtask: any) => ({
-        ...subtask,
-        createdAt: subtask.createdAt?.toDate ? subtask.createdAt.toDate() : new Date(subtask.createdAt),
-        updatedAt: subtask.updatedAt?.toDate ? subtask.updatedAt.toDate() : new Date(subtask.updatedAt),
-      })) : [];
+      const subTasks = data.subTasks ? data.subTasks.map((subtaskData: Task) => {
+        const subtaskCreatedAt = subtaskData.createdAt instanceof Timestamp ? subtaskData.createdAt.toDate() : new Date(subtaskData.createdAt);
+        const subtaskUpdatedAt = subtaskData.updatedAt instanceof Timestamp ? subtaskData.updatedAt.toDate() : new Date(subtaskData.updatedAt);
+        return {
+          ...subtaskData,
+          createdAt: subtaskCreatedAt,
+          updatedAt: subtaskUpdatedAt,
+        } as Task;
+      }) : [];
 
       return {
         id: doc.id,
@@ -475,7 +479,7 @@ export const useAppStore = create<AppState>()((set, get) => {
         const newDocument = {
           ...documentData,
           fileUrl: fileUrl,
-          uploadedAt: new Date(),
+          uploadedAt: Timestamp.now(),
         };
         await addDoc(documentsCollection, newDocument);
       } catch (error) {

@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { Task, User } from './store';
 
 const genAI = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
 
@@ -67,7 +68,7 @@ export async function getChatResponse(message: string, context?: string) {
   }
 }
 
-export async function generateProjectInsights(tasks: any[], teamMembers: any[]) {
+export async function generateProjectInsights(tasks: Task[], teamMembers: User[]) {
   const prompt = `
     Analyze the following AgriSync-X drone project data and provide insights:
     

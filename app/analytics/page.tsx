@@ -1,7 +1,7 @@
 'use client';
 
 import Layout from '@/components/Layout';
-import { useAppStore } from '@/lib/store';
+import { Task, useAppStore } from '@/lib/store';
 import { 
   PieChart, 
   Pie, 
@@ -12,10 +12,7 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  Legend, 
   ResponsiveContainer,
-  LineChart,
-  Line,
   Area,
   AreaChart
 } from 'recharts';
@@ -103,9 +100,7 @@ export default function AnalyticsPage() {
     };
   });
 
-  console.log("Individual Data:", individualData);
-  console.log("Time Series Data:", timeSeriesData);
-  console.log("Communication Data:", communicationData);
+  
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -183,8 +178,8 @@ export default function AnalyticsPage() {
                     data={statusData.filter(item => item.value > 0)}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false} // Add a check for percent being defined
+                    label={({ name, percent }) => `${name} ${percent !== undefined ? (percent * 100).toFixed(0) : 'N/A'}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -219,7 +214,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="name" stroke="#9CA3AF" />
                   <YAxis stroke="#9CA3AF" />
                   <Tooltip 
-                    formatter={(value, name) => [`${value}%`, 'Progress']}
+                    formatter={(value) => [`${value}%`, 'Progress']}
                     labelFormatter={(label) => `Team Member: ${label}`}
                     contentStyle={{ 
                       backgroundColor: '#1F2937', 

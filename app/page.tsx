@@ -14,7 +14,6 @@ import {
   MessageSquare,
   Send,
   Zap,
-  Target,
   Activity,
   Sparkles,
   Rocket,
@@ -23,7 +22,7 @@ import {
 import Link from 'next/link';
 
 export default function Dashboard() {
-  const { tasks, chatMessages, announcements, currentUser } = useAppStore();
+  const { tasks, announcements, currentUser } = useAppStore();
   const teamMembers = getTeamMembers();
   const [query, setQuery] = useState('');
 
@@ -206,7 +205,7 @@ export default function Dashboard() {
             icon={<AlertCircle className="h-6 w-6 text-orange-400" />}
           >
             <div className="space-y-4">
-              {announcements.slice(0, 3).map((announcement, index) => (
+              {announcements.slice(0, 3).map((announcement) => (
                 <div key={announcement.id} className="relative pl-6 pb-4 border-l-2 border-blue-500/30 last:border-l-0 last:pb-0">
                   <div className="absolute -left-2 top-0 w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full border-2 border-gray-800 shadow-lg"></div>
                   <div className="bg-gray-700/30 p-4 rounded-2xl border border-gray-600/30">

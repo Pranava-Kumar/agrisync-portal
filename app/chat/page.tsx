@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Layout from '@/components/Layout';
 import { useAppStore } from '@/lib/store';
-import { Send, Users, Crown, Smile, Paperclip, MoreVertical } from 'lucide-react';
+import { Send, Users, Crown, Smile, MoreVertical } from 'lucide-react';
 
 export default function ChatPage() {
   const { currentUser, chatMessages, addChatMessage, clearChat } = useAppStore();

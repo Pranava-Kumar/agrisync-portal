@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAppStore, getTeamMembers } from '@/lib/store';
+import { useAppStore, getTeamMembers, User } from '@/lib/store';
 import { Home, CheckSquare, FileText, Users, MessageCircle, Bot, BarChart3, Settings, X, Crown, Sparkles, LogOut, Bone as Drone } from 'lucide-react';
 
 interface SidebarProps {
@@ -68,7 +68,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
 interface SidebarContentProps {
   pathname: string;
-  currentUser: any;
+  currentUser: User | null;
   isAdmin: boolean;
   onClose?: () => void;
   onLogout: () => void;

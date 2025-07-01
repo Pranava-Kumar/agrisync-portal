@@ -8,7 +8,7 @@ import { Bot, User, Send, Lightbulb, Sparkles, Zap } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
-  content: string;
+  content: string | undefined;
   isAI: boolean;
   timestamp: Date;
 }

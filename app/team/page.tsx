@@ -2,7 +2,7 @@
 
 import Layout from '@/components/Layout';
 import { useAppStore, getTeamMembers } from '@/lib/store';
-import { Crown, User, Sparkles, Users as UsersIcon, Target } from 'lucide-react';
+import { Crown, User, Users as UsersIcon, Target } from 'lucide-react';
 
 export default function TeamPage() {
   const { currentUser } = useAppStore();
