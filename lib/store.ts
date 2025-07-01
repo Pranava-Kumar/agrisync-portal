@@ -275,7 +275,7 @@ export const useAppStore = create<AppState>()((set, get) => {
       const createdAt = convertToDate(data.createdAt);
       const updatedAt = convertToDate(data.updatedAt);
 
-      const subTasks = data.subTasks ? data.subTasks.map((subtaskData: Task) => {
+      const subTasks = data.subTasks ? (data.subTasks as Task[]).map((subtaskData: Task) => {
         const subtaskCreatedAt = convertToDate(subtaskData.createdAt);
         const subtaskUpdatedAt = convertToDate(subtaskData.updatedAt);
         return {
